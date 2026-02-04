@@ -1,0 +1,56 @@
+:root {
+  --vyaya-primary: #2c5f2d;
+  --vyaya-secondary: #97bc62;
+  --vyaya-accent: #1a3c1a;
+  --vyaya-light: #f0f7f0;
+  --vyaya-danger: #c94c4c;
+  --vyaya-warning: #e6a23c;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8faf8;
+}
+
+.app-container {
+  min-height: 100vh;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+}
+
+.btn-primary {
+  background-color: var(--vyaya-primary);
+  border-color: var(--vyaya-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--vyaya-accent);
+  border-color: var(--vyaya-accent);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  color: var(--vyaya-primary) !important;
+}
+
+.progress {
+  height: 8px;
+  border-radius: 4px;
+}
+
+.expense-item {
+  transition: background-color 0.2s;
+}
+
+.expense-item:hover {
+  background-color: var(--vyaya-light);
+}
