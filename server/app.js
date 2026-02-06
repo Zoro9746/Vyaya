@@ -8,6 +8,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const passport = require('passport');
+const cookieParser = require('cookie-parser');
 
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -20,14 +21,21 @@ require('./config/passport')(passport);
 
 const app = express();
 
+app.use(cookieParser());
+
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: false,
+  }));
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: process.env.CLIENT_URL, // MUST be exact frontend URL
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 
 // Rate limiting
 const limiter = rateLimit({

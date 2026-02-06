@@ -1,36 +1,28 @@
 /**
- * Axios API instance with JWT interceptor
+ * Axios API Instance
+ * ------------------
+ * Uses cookie-based authentication (no localStorage tokens)
+ * Works reliably on mobile and desktop browsers
  */
 
 import axios from 'axios';
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api`;
+
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true, // REQUIRED to send cookies
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add token to requests
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('vyaya_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Handle 401 - token expired
+// Global response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // If user is unauthorized, redirect to login
     if (error.response?.status === 401) {
-      localStorage.removeItem('vyaya_token');
-      localStorage.removeItem('vyaya_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

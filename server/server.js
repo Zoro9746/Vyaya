@@ -7,6 +7,11 @@ require('dotenv').config();
 const app = require('./app');
 const connectDB = require('./config/db');
 
+// 🔐 IMPORTANT: Trust Render's reverse proxy
+// Required for secure cookies to work correctly
+app.set('trust proxy', 1);
+
+// Connect to MongoDB
 connectDB();
 
 const PORT = process.env.PORT || 5000;

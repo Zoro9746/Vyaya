@@ -1,5 +1,9 @@
 /**
- * Auth Context - Global authentication state
+ * Auth Context
+ * ------------
+ * Manages global authentication state using
+ * secure, cookie-based authentication.
+ * No tokens are stored in localStorage.
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -19,77 +23,89 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * On app load:
+   * Ask backend if user is authenticated (via cookie)
+   */
   useEffect(() => {
-    const token = localStorage.getItem('vyaya_token');
-    const savedUser = localStorage.getItem('vyaya_user');
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-      // Verify token and refresh user data
-      api
-        .get('/auth/me')
-        .then((res) => {
-          setUser(res.data);
-          localStorage.setItem('vyaya_user', JSON.stringify(res.data));
-        })
-        .catch(() => {
-          localStorage.removeItem('vyaya_token');
-          localStorage.removeItem('vyaya_user');
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    const fetchUser = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        setUser(res.data);
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
   }, []);
 
+  /**
+   * Login (email + password)
+   * Backend sets HTTP-only cookie
+   */
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    const { token, ...userData } = res.data;
-    localStorage.setItem('vyaya_token', token);
-    localStorage.setItem('vyaya_user', JSON.stringify(userData));
-    setUser(userData);
-    return userData;
+    setUser(res.data);
+    return res.data;
   };
 
+  /**
+   * Register new user
+   * Backend sets HTTP-only cookie
+   */
   const register = async (userData) => {
     const res = await api.post('/auth/register', userData);
-    const { token, ...user } = res.data;
-    localStorage.setItem('vyaya_token', token);
-    localStorage.setItem('vyaya_user', JSON.stringify(user));
-    setUser(user);
-    return user;
+    setUser(res.data);
+    return res.data;
   };
 
+  /**
+   * Complete initial setup
+   */
   const completeSetup = async (setupData) => {
     const res = await api.post('/auth/setup', setupData);
-    const updated = { ...user, ...res.data };
-    setUser(updated);
-    localStorage.setItem('vyaya_user', JSON.stringify(updated));
-    return updated;
+    setUser(res.data);
+    return res.data;
   };
 
-  const logout = () => {
-    localStorage.removeItem('vyaya_token');
-    localStorage.removeItem('vyaya_user');
-    setUser(null);
+  /**
+   * Logout user
+   * Backend clears auth cookie
+   */
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      // Ignore errors
+    } finally {
+      setUser(null);
+    }
   };
 
+  /**
+   * Update user locally (profile edits)
+   */
   const updateUser = (userData) => {
-    const updated = { ...user, ...userData };
-    setUser(updated);
-    localStorage.setItem('vyaya_user', JSON.stringify(updated));
+    setUser((prev) => ({ ...prev, ...userData }));
   };
 
   const value = {
     user,
     loading,
+    isAuthenticated: !!user,
     login,
     register,
     completeSetup,
     logout,
     updateUser,
-    isAuthenticated: !!user,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };

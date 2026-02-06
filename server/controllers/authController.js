@@ -1,6 +1,7 @@
 /**
  * Authentication Controller
- * Handles signup, login, and Google OAuth
+ * Handles signup, login, setup, and Google OAuth
+ * Uses secure cookie-based JWT authentication
  */
 
 const User = require('../models/User');
@@ -10,7 +11,7 @@ const { validationResult } = require('express-validator');
 
 /**
  * @route   POST /api/auth/register
- * @desc    Register new user with email/password
+ * @desc    Register new user (Email + Password)
  */
 const register = async (req, res) => {
   try {
@@ -21,12 +22,13 @@ const register = async (req, res) => {
 
     const { name, email, password, phone, location } = req.body;
 
-    // Check if user exists
+    // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
+    // Create user
     const user = await User.create({
       name,
       email: email.toLowerCase(),
@@ -35,20 +37,11 @@ const register = async (req, res) => {
       location: location || '',
     });
 
-    const token = generateToken(user._id);
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      location: user.location,
-      monthlyIncome: user.monthlyIncome,
-      plannedSpending: user.plannedSpending,
-      categoryBudgets: user.categoryBudgets,
-      monthlySavingsGoal: user.monthlySavingsGoal,
-      setupCompleted: user.setupCompleted,
-      token,
-    });
+    // Generate JWT and set cookie
+    generateToken(res, user._id);
+
+    // Return user data (NO token in response)
+    res.status(201).json(user);
   } catch (error) {
     res.status(500).json({ message: error.message || 'Server error' });
   }
@@ -68,13 +61,8 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-    if (!user) {
+    if (!user || !user.password) {
       return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    // Google users may not have password
-    if (!user.password) {
-      return res.status(401).json({ message: 'Please use Google to sign in' });
     }
 
     const isMatch = await user.comparePassword(password);
@@ -82,12 +70,12 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = generateToken(user._id);
-    const userResponse = await User.findById(user._id).select('-password');
-    res.json({
-      ...userResponse.toObject(),
-      token,
-    });
+    // Set auth cookie
+    generateToken(res, user._id);
+
+    // Send user data
+    const safeUser = await User.findById(user._id).select('-password');
+    res.json(safeUser);
   } catch (error) {
     res.status(500).json({ message: error.message || 'Server error' });
   }
@@ -95,28 +83,20 @@ const login = async (req, res) => {
 
 /**
  * @route   POST /api/auth/setup
- * @desc    Complete initial setup: income, planned spending, category budgets
- * CRITICAL: Validates sum(categoryBudgets) <= plannedSpending
+ * @desc    Complete initial setup (income & budgets)
  */
 const completeSetup = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const { monthlyIncome, plannedSpending, categoryBudgets, monthlySavingsGoal } = req.body;
 
-    // CRITICAL VALIDATION: sum(categoryBudgets) <= plannedSpending
+    // Validate category budgets
     const validation = validateCategoryBudgets(plannedSpending, categoryBudgets);
     if (!validation.valid) {
       return res.status(400).json({ message: validation.message });
     }
 
     if (plannedSpending > monthlyIncome) {
-      return res.status(400).json({
-        message: 'Planned spending cannot exceed monthly income',
-      });
+      return res.status(400).json({ message: 'Planned spending cannot exceed income' });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -124,7 +104,7 @@ const completeSetup = async (req, res) => {
       {
         monthlyIncome,
         plannedSpending,
-        categoryBudgets: categoryBudgets || [],
+        categoryBudgets,
         monthlySavingsGoal: monthlySavingsGoal || 0,
         setupCompleted: true,
       },
@@ -139,7 +119,7 @@ const completeSetup = async (req, res) => {
 
 /**
  * @route   GET /api/auth/me
- * @desc    Get current user (protected)
+ * @desc    Get current logged-in user
  */
 const getMe = async (req, res) => {
   try {
@@ -151,18 +131,31 @@ const getMe = async (req, res) => {
 };
 
 /**
- * @route   GET /api/auth/google
- * @desc    Initiate Google OAuth (handled by Passport)
- */
-
-/**
  * @route   GET /api/auth/google/callback
- * @desc    Google OAuth callback - generates JWT and redirects to frontend
+ * @desc    Google OAuth callback
  */
 const googleCallback = (req, res) => {
-  const token = generateToken(req.user._id);
-  const redirectUrl = `${process.env.CLIENT_URL}/auth/callback?token=${token}`;
-  res.redirect(redirectUrl);
+  // Set auth cookie
+  generateToken(res, req.user._id);
+
+  // Redirect to frontend dashboard
+  res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+};
+
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Logout user by clearing auth cookie
+ */
+const logout = (req, res) => {
+  res.cookie('token', '', {
+    httpOnly: true,
+    secure: true,      // required on Render (HTTPS)
+    sameSite: 'None',  // required for cross-site cookies
+    expires: new Date(0),
+  });
+
+  res.json({ message: 'Logged out successfully' });
 };
 
 module.exports = {
@@ -171,4 +164,5 @@ module.exports = {
   completeSetup,
   getMe,
   googleCallback,
+  logout, // 👈 add this
 };

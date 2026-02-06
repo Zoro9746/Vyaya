@@ -11,8 +11,11 @@ const {
   completeSetup,
   getMe,
   googleCallback,
+  logout,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
+
+
 
 const router = express.Router();
 
@@ -66,6 +69,9 @@ router.get(
   passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL}/login` }),
   googleCallback
 );
+
+// Logout route
+router.post('/logout', logout);
 
 // Protected routes
 router.get('/me', protect, getMe);
