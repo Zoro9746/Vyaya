@@ -4,7 +4,6 @@ import SetupRedirect from './components/SetupRedirect';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AuthCallback from './pages/AuthCallback';
 import Setup from './pages/Setup';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
@@ -18,7 +17,6 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
 
         <Route
           path="/setup"

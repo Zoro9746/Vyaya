@@ -7,7 +7,11 @@
 
 import axios from 'axios';
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api`;
+// Base API URL:
+// - In production, VITE_API_URL should be your backend origin (e.g. https://vyaya-api.onrender.com)
+// - In local dev with Vite proxy, you can leave it empty and proxy /api to the backend.
+const base = import.meta.env.VITE_API_URL || '';
+const API_URL = `${base}/api`;
 
 const api = axios.create({
   baseURL: API_URL,

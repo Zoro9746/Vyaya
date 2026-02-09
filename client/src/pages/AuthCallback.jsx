@@ -1,40 +1,15 @@
-import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import api from '../utils/api';
-
 /**
- * Handles Google OAuth callback - extracts token from URL and stores in localStorage
+ * Deprecated AuthCallback page.
+ *
+ * Google OAuth now redirects directly from the backend to
+ * the frontend route (e.g. /dashboard) **without** passing any token
+ * in the URL and without using localStorage/sessionStorage.
+ *
+ * This component is intentionally left as a no-op placeholder
+ * and is no longer used in the router.
  */
 const AuthCallback = () => {
-  const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    const token = searchParams.get('token');
-    if (token) {
-      localStorage.setItem('vyaya_token', token);
-      api
-        .get('/auth/me')
-        .then((res) => {
-          const user = res.data;
-          localStorage.setItem('vyaya_user', JSON.stringify(user));
-          window.location.href = user.setupCompleted ? '/' : '/setup';
-        })
-        .catch(() => {
-          localStorage.removeItem('vyaya_token');
-          window.location.href = '/login';
-        });
-    } else {
-      window.location.href = '/login';
-    }
-  }, [searchParams]);
-
-  return (
-    <div className="d-flex justify-content-center align-items-center min-vh-100">
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Completing sign in...</span>
-      </div>
-    </div>
-  );
+  return null;
 };
 
 export default AuthCallback;
