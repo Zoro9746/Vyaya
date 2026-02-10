@@ -1,6 +1,6 @@
 /**
  * Passport Configuration
- * JWT and Google OAuth strategies
+ * Google OAuth strategy. JWT auth uses cookies + protect middleware, not Passport.
  */
 
 const JwtStrategy = require('passport-jwt').Strategy;
@@ -8,19 +8,19 @@ const ExtractJwt = require('passport-jwt').ExtractJwt;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
 
-// JWT options
+// STEP 3 — Guard: server.js validates env before requiring app; this is a safety net
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET missing in environment variables');
+}
+
 const jwtOptions = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey: process.env.JWT_SECRET,
 };
-
-// JWT Strategy - verify token and load user
 const jwtStrategy = new JwtStrategy(jwtOptions, async (payload, done) => {
   try {
     const user = await User.findById(payload.id);
-    if (user) {
-      return done(null, user);
-    }
+    if (user) return done(null, user);
     return done(null, false);
   } catch (error) {
     return done(error, false);

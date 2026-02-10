@@ -27,24 +27,22 @@ app.use(cookieParser());
 app.use(helmet({
     crossOriginResourcePolicy: false,
   }));
+// STEP 5 — CORS: exact frontend origin only, no wildcard; credentials for cookies
 app.use(
   cors({
-    // ✅ MUST be exact frontend origin (e.g. https://vyaya.vercel.app)
-    origin: process.env.CLIENT_URL,
-    // ✅ Allow browsers to send/receive cookies
+    origin: process.env.CLIENT_URL || false, // false = no CORS when CLIENT_URL missing
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    // We do NOT rely on Authorization headers for auth,
-    // but allow it in case future non-auth APIs need it.
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
 
-// Rate limiting
+// Rate limiting: stricter in production, lenient in development
+// (Dev often hits /api/auth/me on every load + retries, so 100/15min can trigger 429)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 2000,
   message: { message: 'Too many requests, please try again later.' },
 });
 app.use('/api/', limiter);
@@ -64,14 +62,12 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/reports', reportsRoutes);
 
-// 🔍 Temporary debug route to inspect cookies from clients
-// Useful for verifying SameSite=None; Secure behavior on mobile and cross-domain.
-app.get('/api/debug-cookie', (req, res) => {
-  res.json({
-    cookies: req.cookies || {},
-    signedCookies: req.signedCookies || {},
+// Debug route: only in non-production (security)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/debug-cookie', (req, res) => {
+    res.json({ cookies: req.cookies || {}, signedCookies: req.signedCookies || {} });
   });
-});
+}
 
 // Health check
 app.get('/api/health', (req, res) => {

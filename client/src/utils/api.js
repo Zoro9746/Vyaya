@@ -7,11 +7,10 @@
 
 import axios from 'axios';
 
-// Base API URL:
-// - In production, VITE_API_URL should be your backend origin (e.g. https://vyaya-api.onrender.com)
-// - In local dev with Vite proxy, you can leave it empty and proxy /api to the backend.
-const base = import.meta.env.VITE_API_URL || '';
-const API_URL = `${base}/api`;
+// STEP 7 — Base URL: set VITE_API_URL on Vercel to your Render backend (no trailing slash)
+// Dev: empty uses Vite proxy; or set VITE_API_URL=http://localhost:5000 for direct + cookies
+const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const API_URL = base ? `${base}/api` : '/api';
 
 const api = axios.create({
   baseURL: API_URL,

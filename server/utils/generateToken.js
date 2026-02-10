@@ -21,11 +21,12 @@ const generateToken = (res, userId) => {
     }
   );
 
-  // Attach JWT as an HTTP-only cookie
+  // STEP 5 — Cookie options: httpOnly, sameSite=None for cross-domain; secure only in production (localhost is http)
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('token', token, {
-    httpOnly: true,       // Prevent JS access (XSS protection)
-    secure: true,         // Required for HTTPS (Render)
-    sameSite: 'None',     // Required for cross-site & mobile browsers
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'None' : 'Lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 };

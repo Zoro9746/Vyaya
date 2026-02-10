@@ -148,13 +148,13 @@ const googleCallback = (req, res) => {
  * @desc    Logout user by clearing auth cookie
  */
 const logout = (req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('token', '', {
     httpOnly: true,
-    secure: true,      // required on Render (HTTPS)
-    sameSite: 'None',  // required for cross-site cookies
+    secure: isProduction,
+    sameSite: isProduction ? 'None' : 'Lax',
     expires: new Date(0),
   });
-
   res.json({ message: 'Logged out successfully' });
 };
 
@@ -164,5 +164,5 @@ module.exports = {
   completeSetup,
   getMe,
   googleCallback,
-  logout, // 👈 add this
+  logout, 
 };
